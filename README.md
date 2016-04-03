@@ -1,42 +1,88 @@
 # zconfig-daemon
 
-ZConfig is one part daemon, one-to-many parts client library.
+## Overview
 
-ZooKeeper allows us to store configuration values in a distributed manner. 
+[ZooKeeper](http://zookeeper.apache.org/) (ZK) enables distributed and reliable storage of configuration values as a series of nodes. Typically, each component requiring access to these values will need to communicate with ZK. This has a number of disadvantages:
 
-Accessing and updating these values at runtime isn't always so straightforward, and can be prone to catastrophic knock-on failures (ref airbnb?).
+* A client library may not be available for the language of choice.
+* Even if client libraries are available, handling ZK connection states can be complex.
+* If every component process connects to ZK, there is a potential for a flooding of watches [ref?](#) and mass (re)connects causing knock-on failures [ref?](#).
 
-The idea behind ZConfig is to have a single daemon per machine. This daemon is responsible for maintaining a locally-stored mirror of the configuration stored in ZooKeeper.
+[ZConfig](https://github.com/itszootime/zconfig-daemon) consists of a daemon and (optional) client libraries. The daemon is responsible for maintaining a locally-cached copy of a configuration stored in ZK. Clients are able to read from this locally-cached copy without concern for ZK connection states and watches. To keep in sync with ZK, clients can watch OS-level file events. This approach can alleviate scalability issues, as only one set of ZK watches is required per daemon/machine, as opposed to `x` sets for `x` component processes.
 
-It's then possible for clients to read from this locally-stored mirror, without having to worry about ZooKeeper connection states and watches. If the clients are interesting in keeping in sync with ZooKeeper, they can setup operating system level file watches. To make things a bit easier, [libraries are available](#).
+## Build
 
-This enables ZooKeeper configurations to be accessed within any language, without requiring a ZooKeeper client library.
+TODO
 
-## Benefits
+## Usage
 
-* Requires only one set of ZooKeeper watches per machine, instead of x sets for x worker processes.
+`zconfig-daemon` can be started with the following flags:
 
-## Setup
+Flag          | Purpose
+--------------|----------
+`--zk`        | x
+`--zk-root`   | x (`/zconfig` by default)
+`--base-path` | x
 
-Some stuff here to setup...
+Once running, the daemon will recursively setup watches for children (and their values) of the root. During initialisation, and when changes are detected, it'll fetch children and values to build a configuration, which is then serialized as a series of YAML files stored in the base path.
 
-## How to store in ZK?
+For example, consider a series of nodes created like so:
 
-/zconfig (level 0 -> ChildrenW)
+```
+$ ./zookeeper/bin/zkCli.sh
+[zk] create /zconfig/servers
+[zk] create /zconfig/servers/db
+[zk] create /zconfig/servers/db/192.168.0.1
+[zk] create /zconfig/servers/db/192.168.0.2
+[zk] create /zconfig/settings
+[zk] create /zconfig/settings/timeout 1000
+```
 
-/zconfig/servers (level 1 -> ChildrenW)
-/zconfig/servers/db (level 2 -> GetW, ChildrenW)
-/zconfig/servers/db/127.0.0.1
+The locally-cached configuration would be stored as:
 
-/zconfig/search/timeout (level 2 -> GetW, ChildrenW)
+```yaml
+# servers.yml
+db:
+- 192.168.0.1
+- 192.168.0.2
+```
 
-Without children, values -> get
-With children, values -> children
+```yaml
+# settings.yml
+timeout: "1000"
+```
 
-* Benefit is that services could register ephermeral nodes themselves
-but that's a lot of watches.
-* Another option would be to increment a version number in /zconfig (ZK does this already?).
+### Behaviour
 
-/zconfig/servers # returns yaml file
+The daemon will retrieve all values stored in ZK as strings.
 
-Downside is this is now zconfig specific, changes the whole node when only a single value is modified.
+Additional logic is required to determine if the value for a key should contain an array or a map. Only if **all** children of a node have empty values, it'll be an array. Consider [the previous example](#Usage), but now we want to clear the timeout value:
+
+```
+$ ./zookeeper/bin/zkCli.sh
+[zk] set /zconfig/settings/timeout ""
+```
+
+The stored configuration will be modified like so:
+
+```yaml
+# settings.yml
+- timeout
+```
+
+As you can see, the timeout node is no longer treated as a key-value pair, but as a value in an array. For this reason, clients should return an empty string/null for **any** key that doesn't exist in the locally-cached files.
+
+### Clients
+
+* [Ruby](https://github.com/itszootime/zconfig-ruby)
+
+## Q&A
+
+**Why not just store a YAML/JSON serialized configuration directly in ZK?**
+This complicates matters when storing the configuration in ZK, and means we can't take advantage of ephermeral(sp?) nodes for service discovery.
+
+**Won't this create lots of ZK watches?**
+Yes, it can do. Due to the fact that nesting is allowed within the configuration, a single node requires watches for both the children and the value. I need to do some further investigation to see how much of a problem this is.
+
+**Is it production ready?**
+You're welcome to give it a try.
