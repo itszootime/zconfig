@@ -12,7 +12,6 @@ package main
  */
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
@@ -86,79 +85,6 @@ func zkInit(conn *zk.Conn) {
 }
 
 // TODO: move!
-// // cache caches on disk the configuration values stored at the given root.
-// func cache(conn *zk.Conn, root string) error {
-//   values, err := fetchValues(conn, root)
-//   if (err) {
-//     return err
-//   }
-
-//   // now write to YAML
-//   // needs a base path
-// }
-
-// TODO: every value is a string, is this a problem? (it's hard to fix)
-func fetchValues(conn *zk.Conn, path string) (map[string]interface{}, error) {
-	v := make(map[string]interface{})
-
-	// get children
-	children, _, err := conn.Children(path)
-	if err != nil {
-		// TODO: what errors? maybe the error just means empty value?
-		return nil, err
-	}
-
-	if len(children) > 0 {
-		for i := range children {
-			childpath := path + "/" + children[i]
-			childchildren, _, err := conn.Children(childpath)
-			if err != nil {
-				// TODO: what errors? maybe the error just means empty value?
-				return nil, err
-			}
-
-			if len(childchildren) == 0 {
-				// value
-				bytes, _, err := conn.Get(childpath)
-				if err != nil {
-					// TODO: what errors? maybe the error just means empty value?
-					return nil, err
-				}
-				v[children[i]] = string(bytes)
-			} else {
-				// could be an array of values, or could be recursive
-				childvalues, err := fetchValues(conn, childpath)
-				if err != nil {
-					// TODO: errors
-					return nil, err
-				}
-
-				// the challenge here is how to decide if this is an array
-				// if all values are empty strings, it's an array
-				// TODO: document this logic, it can be strange under certain conditions
-				valuesarr := make([]string, 0, len(childvalues))
-				isarr := true
-				for k, v := range childvalues {
-					// TODO: seems hacky
-					if len(fmt.Sprintf("%v", v)) > 0 {
-						isarr = false
-						break
-					}
-					valuesarr = append(valuesarr, k)
-				}
-
-				if isarr {
-					v[children[i]] = valuesarr
-				} else {
-					v[children[i]] = childvalues
-				}
-			}
-		}
-	}
-
-	return v, nil
-}
-
 func watchValue(conn *zk.Conn, path string, changes chan string, errors chan error) {
 	for {
 		_, _, events, err := conn.GetW(path)
@@ -226,11 +152,9 @@ func watchTree(conn *zk.Conn, path string, changes chan string, errors chan erro
 }
 
 func printValues(conn *zk.Conn, path string) {
-	values, err := fetchValues(conn, path)
+	config, err := FetchConfig(conn, path)
 	iferr(err)
-	bytes, err := json.Marshal(values)
-	iferr(err)
-	fmt.Printf("%v\n", string(bytes))
+	fmt.Printf("%v", config)
 }
 
 func watch(conn *zk.Conn, path string) (chan string, chan error) {
