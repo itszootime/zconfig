@@ -12,6 +12,7 @@ package main
  */
 
 import (
+  "flag"
   "fmt"
   "github.com/samuel/go-zookeeper/zk"
   "strings"
@@ -19,10 +20,20 @@ import (
   "encoding/json"
 )
 
-// struct Setup {
-//   zkRoot
-//   basePath
-// }
+
+type Setup struct {
+  basePath string
+  zk string
+  zkRoot string
+}
+
+var setup = Setup{}
+
+func init() {
+  flag.StringVar(&setup.basePath, "base-path", "", "base path")
+  flag.StringVar(&setup.zk, "zk", "127.0.0.1:2181", "zk")
+  flag.StringVar(&setup.zkRoot, "zk-root", "/zconfig", "zk root")
+}
 
 func iferr(err error) {
   if err != nil {
@@ -30,13 +41,52 @@ func iferr(err error) {
   }
 }
 
-func connect() *zk.Conn {
-  str := "localhost:2181"
-  conn, _, err := zk.Connect(strings.Split(str, ","), time.Second)
-  iferr(err)
+func main() {
+  flag.Parse()
+
+  conn := zkConnect()
+  defer conn.Close()
+  zkInit(conn)
+
+  printValues(conn, setup.zkRoot)
+
+  // get and watch root
+  changes, errors := watch(conn, setup.zkRoot)
+  for {
+    select {
+    case change := <-changes:
+      fmt.Printf("main:change path=%v\n", change)
+      printValues(conn, setup.zkRoot)
+    case <-errors:
+      // we'll end up with node does not exist here
+      // which will kill the go routine (it's fine)
+      // fmt.Printf("main:error error=%v\n", err)
+    }
+  }
+}
+
+func zkConnect() *zk.Conn {
+  // TODO: allow configurable timeout?
+  conn, _, err := zk.Connect(strings.Split(setup.zk, ","), time.Second)
+  iferr(err) // severe
   return conn
 }
 
+func zkInit(conn *zk.Conn) {
+  // TODO: ensure these flags are correct
+  flags := int32(0)
+  acl := zk.WorldACL(zk.PermAll)
+
+  exists, _, err := conn.Exists(setup.zkRoot)
+  iferr(err) // severe
+  if !exists {
+    // TODO: ignore node already exists here
+    _, err := conn.Create(setup.zkRoot, nil, flags, acl)
+    iferr(err)
+  }
+}
+
+// TODO: move!
 // // cache caches on disk the configuration values stored at the given root.
 // func cache(conn *zk.Conn, root string) error {
 //   values, err := fetchValues(conn, root)
@@ -193,47 +243,4 @@ func watch(conn *zk.Conn, path string) (chan string, chan error) {
   }()
 
   return changes, errors
-}
-
-func main() {
-  conn := connect()
-  defer conn.Close()
-
-  flags := int32(0)
-  acl := zk.WorldACL(zk.PermAll)
-
-  // make root if it doesn't exist
-  zkRoot := "/zconfig"
-
-  // TODO: dunno about this code
-  // will get node already exists without this
-  // BUT i know this isn't correct zk usage - what happens if someone else
-  // creates the node inbetween the exists and create calls?
-  exists, _, err := conn.Exists(zkRoot)
-  iferr(err)
-  if !exists {
-    _, err := conn.Create(zkRoot, nil, flags, acl)
-    iferr(err)
-  }
-
-  // test
-  // values, err := values(conn, zkRoot + "/servers")
-  // iferr(err)
-  // fmt.Printf("%v\n", values)
-
-  printValues(conn, zkRoot)
-
-  // get and watch root
-  changes, errors := watch(conn, zkRoot)
-  for {
-    select {
-    case change := <-changes:
-      fmt.Printf("main:change path=%v\n", change)
-      printValues(conn, zkRoot)
-    case <-errors:
-      // we'll end up with node does not exist here
-      // which will kill the go routine (it's fine)
-      // fmt.Printf("main:error error=%v\n", err)
-    }
-  }
 }
