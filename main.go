@@ -21,17 +21,17 @@ import (
 )
 
 type Setup struct {
-	basePath string
-	zk       string
-	zkRoot   string
+	BasePath string
+	Zk       string
+	ZkRoot   string
 }
 
 var setup = Setup{}
 
 func init() {
-	flag.StringVar(&setup.basePath, "base-path", "", "base path")
-	flag.StringVar(&setup.zk, "zk", "127.0.0.1:2181", "zk")
-	flag.StringVar(&setup.zkRoot, "zk-root", "/zconfig", "zk root")
+	flag.StringVar(&setup.BasePath, "base-path", "", "base path")
+	flag.StringVar(&setup.Zk, "zk", "127.0.0.1:2181", "zk")
+	flag.StringVar(&setup.ZkRoot, "zk-root", "/zconfig", "zk root")
 }
 
 func iferr(err error) {
@@ -47,15 +47,15 @@ func main() {
 	defer conn.Close()
 	zkInit(conn)
 
-	printValues(conn, setup.zkRoot)
+	printValues(conn, setup.ZkRoot)
 
 	// get and watch root
-	changes, errors := watch(conn, setup.zkRoot)
+	changes, errors := watch(conn, setup.ZkRoot)
 	for {
 		select {
 		case change := <-changes:
 			fmt.Printf("main:change path=%v\n", change)
-			printValues(conn, setup.zkRoot)
+			printValues(conn, setup.ZkRoot)
 		case <-errors:
 			// we'll end up with node does not exist here
 			// which will kill the go routine (it's fine)
@@ -66,7 +66,7 @@ func main() {
 
 func zkConnect() *zk.Conn {
 	// TODO: allow configurable timeout?
-	conn, _, err := zk.Connect(strings.Split(setup.zk, ","), time.Second)
+	conn, _, err := zk.Connect(strings.Split(setup.Zk, ","), time.Second)
 	iferr(err) // severe
 	return conn
 }
@@ -76,11 +76,11 @@ func zkInit(conn *zk.Conn) {
 	flags := int32(0)
 	acl := zk.WorldACL(zk.PermAll)
 
-	exists, _, err := conn.Exists(setup.zkRoot)
+	exists, _, err := conn.Exists(setup.ZkRoot)
 	iferr(err) // severe
 	if !exists {
 		// TODO: ignore node already exists here
-		_, err := conn.Create(setup.zkRoot, nil, flags, acl)
+		_, err := conn.Create(setup.ZkRoot, nil, flags, acl)
 		iferr(err)
 	}
 }
