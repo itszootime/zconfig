@@ -1,16 +1,5 @@
 package main
 
-/*
- * First version:
- *
- * - a method to generate configs from roots
- * - a shared channel for node updates, just publishes the root path (i.e.
- *   /zconfig/servers)
- * - watch children on super-root
- * - watch children and values on non-root (and so on)
- * - keep track of no. watches
- */
-
 import (
 	"flag"
 	"fmt"
