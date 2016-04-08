@@ -38,7 +38,8 @@ func main() {
 	printValues(conn, setup.ZkRoot)
 
 	// get and watch root
-	changes, errors := watch(conn, setup.ZkRoot)
+	watcher := NewWatcher(conn, setup.ZkRoot)
+	changes, errors := watcher.Start()
 	for {
 		select {
 		case change := <-changes:
@@ -73,86 +74,8 @@ func zkInit(conn *zk.Conn) {
 	}
 }
 
-// TODO: move!
-func watchValue(conn *zk.Conn, path string, changes chan string, errors chan error) {
-	for {
-		_, _, events, err := conn.GetW(path)
-		if err != nil {
-			errors <- err
-			return
-		}
-
-		evt := <-events
-		// TODO: zk node does not exist is normal
-		if evt.Err != nil {
-			errors <- evt.Err
-			return
-		}
-
-		changes <- path
-	}
-}
-
-func watchTree(conn *zk.Conn, path string, changes chan string, errors chan error) {
-	// TODO: don't need value watches on level 0 (i.e. /zconfig/servers)
-	// TODO: this can also build the config
-	treeWatches := make(map[string]bool)
-	valueWatches := make(map[string]bool)
-
-	for {
-		children, _, events, err := conn.ChildrenW(path)
-		if err != nil {
-			errors <- err
-			return
-		}
-
-		for i := range children {
-			child := children[i]
-			childpath := path + "/" + child
-
-			// watch tree
-			if !treeWatches[child] {
-				treeWatches[child] = true
-				go func() {
-					defer delete(treeWatches, child)
-					watchTree(conn, childpath, changes, errors)
-				}()
-			}
-
-			// watch values
-			if !valueWatches[child] {
-				valueWatches[child] = true
-				go func() {
-					defer delete(valueWatches, child)
-					watchValue(conn, childpath, changes, errors)
-				}()
-			}
-		}
-
-		evt := <-events
-		// TODO: zk node does not exist is expected
-		if evt.Err != nil {
-			errors <- evt.Err
-			return
-		}
-
-		changes <- path
-	}
-}
-
 func printValues(conn *zk.Conn, path string) {
 	config, err := FetchConfig(conn, path)
 	iferr(err)
 	fmt.Printf("%v\n", config)
-}
-
-func watch(conn *zk.Conn, path string) (chan string, chan error) {
-	changes := make(chan string)
-	errors := make(chan error)
-
-	go func() {
-		watchTree(conn, path, changes, errors)
-	}()
-
-	return changes, errors
 }
