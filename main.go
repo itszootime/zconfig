@@ -31,6 +31,8 @@ func iferr(err error) {
 func main() {
 	flag.Parse()
 
+	// TODO: check setup, ie. is the base path writable?
+
 	conn := zkConnect()
 	defer conn.Close()
 	zkInit(conn)
