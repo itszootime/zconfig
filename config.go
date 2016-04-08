@@ -81,8 +81,7 @@ func parseData(values map[string]interface{}) interface{} {
 	valuesarr := make([]string, 0, len(values))
 	isarr := true
 	for k, v := range values {
-		// TODO: seems hacky
-		if len(fmt.Sprintf("%v", v)) > 0 {
+		if str, ok := v.(string); !ok || len(str) > 0 {
 			isarr = false
 			break
 		}
