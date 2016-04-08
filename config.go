@@ -10,8 +10,8 @@ type Config struct {
 }
 
 func FetchConfig(conn *zk.Conn, root string) (*Config, error) {
-	// TODO: fetch config data
-	return &Config{}, nil
+	data, err := getData(conn, root)
+	return &Config{data: data}, err
 }
 
 func (c *Config) Save(path string) error {
@@ -23,64 +23,75 @@ func (c *Config) String() string {
 	return fmt.Sprintf("%v", c.data)
 }
 
-// // TODO: every value is a string, is this a problem? (it's hard to fix)
-// func fetchValues(conn *zk.Conn, path string) (map[string]interface{}, error) {
-//   v := make(map[string]interface{})
+func getData(conn *zk.Conn, path string) (map[string]interface{}, error) {
+	data := make(map[string]interface{})
 
-//   // get children
-//   children, _, err := conn.Children(path)
-//   if err != nil {
-//     // TODO: what errors? maybe the error just means empty value?
-//     return nil, err
-//   }
+	children, _, err := conn.Children(path)
+	if err != nil {
+		// TODO: what errors? maybe the error just means empty value?
+		return nil, err
+	}
 
-//   if len(children) > 0 {
-//     for i := range children {
-//       childpath := path + "/" + children[i]
-//       childchildren, _, err := conn.Children(childpath)
-//       if err != nil {
-//         // TODO: what errors? maybe the error just means empty value?
-//         return nil, err
-//       }
+	if len(children) > 0 {
+		for i := range children {
+			child, err := getChildData(conn, path, children[i])
+			if err != nil {
+				// TODO: errors?
+				return nil, err
+			}
+			data[children[i]] = child
+		}
+	}
 
-//       if len(childchildren) == 0 {
-//         // value
-//         bytes, _, err := conn.Get(childpath)
-//         if err != nil {
-//           // TODO: what errors? maybe the error just means empty value?
-//           return nil, err
-//         }
-//         v[children[i]] = string(bytes)
-//       } else {
-//         // could be an array of values, or could be recursive
-//         childvalues, err := fetchValues(conn, childpath)
-//         if err != nil {
-//           // TODO: errors
-//           return nil, err
-//         }
+	return data, nil
+}
 
-//         // the challenge here is how to decide if this is an array
-//         // if all values are empty strings, it's an array
-//         // TODO: document this logic, it can be strange under certain conditions
-//         valuesarr := make([]string, 0, len(childvalues))
-//         isarr := true
-//         for k, v := range childvalues {
-//           // TODO: seems hacky
-//           if len(fmt.Sprintf("%v", v)) > 0 {
-//             isarr = false
-//             break
-//           }
-//           valuesarr = append(valuesarr, k)
-//         }
+func getChildData(conn *zk.Conn, root string, child string) (interface{}, error) {
+	path := root + "/" + child
+	children, _, err := conn.Children(path)
+	if err != nil {
+		// TODO: what errors? maybe the error just means empty value?
+		return nil, err
+	}
 
-//         if isarr {
-//           v[children[i]] = valuesarr
-//         } else {
-//           v[children[i]] = childvalues
-//         }
-//       }
-//     }
-//   }
+	if len(children) == 0 {
+		// value
+		bytes, _, err := conn.Get(path)
+		if err != nil {
+			// TODO: what errors? maybe the error just means empty value?
+			return nil, err
+		}
+		return string(bytes), nil
+	} else {
+		// could be an array of values, or could be recursive
+		data, err := getData(conn, path)
+		if err != nil {
+			// TODO: errors?
+			return nil, err
+		}
 
-//   return v, nil
-// }
+		return parseData(data), nil
+	}
+}
+
+// the challenge here is how to decide if this is an array
+// if all values are empty strings, it's an array
+// TODO: document this logic, it can be strange under certain conditions
+func parseData(values map[string]interface{}) interface{} {
+	valuesarr := make([]string, 0, len(values))
+	isarr := true
+	for k, v := range values {
+		// TODO: seems hacky
+		if len(fmt.Sprintf("%v", v)) > 0 {
+			isarr = false
+			break
+		}
+		valuesarr = append(valuesarr, k)
+	}
+
+	if isarr {
+		return valuesarr
+	} else {
+		return values
+	}
+}
