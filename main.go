@@ -143,7 +143,7 @@ func watchTree(conn *zk.Conn, path string, changes chan string, errors chan erro
 func printValues(conn *zk.Conn, path string) {
 	config, err := FetchConfig(conn, path)
 	iferr(err)
-	fmt.Printf("%v", config)
+	fmt.Printf("%v\n", config)
 }
 
 func watch(conn *zk.Conn, path string) (chan string, chan error) {
