@@ -8,13 +8,7 @@ import (
 	"time"
 )
 
-type Setup struct {
-	BasePath string
-	Zk       string
-	ZkRoot   string
-}
-
-var setup = Setup{}
+var setup = NewSetup()
 
 func init() {
 	// TODO: check setup, ie. is the base path writable?
