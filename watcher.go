@@ -41,33 +41,6 @@ func (w *Watcher) Stop() {
 	close(w.errors)
 }
 
-func (w *Watcher) watchValue(path string) {
-	// TODO: mutex here
-	if _, ok := w.value[path]; ok {
-		return
-	}
-
-	w.value[path] = true
-	defer delete(w.value, path)
-
-	for {
-		_, _, events, err := w.conn.GetW(path)
-		if err != nil {
-			w.errors <- err
-			return
-		}
-
-		evt := <-events
-		// TODO: zk node does not exist is normal
-		if evt.Err != nil {
-			w.errors <- evt.Err
-			return
-		}
-
-		w.changes <- path
-	}
-}
-
 func (w *Watcher) watchTree(path string) {
 	// TODO: mutex here
 	if _, ok := w.tree[path]; ok {
@@ -94,6 +67,33 @@ func (w *Watcher) watchTree(path string) {
 
 		evt := <-events
 		// TODO: zk node does not exist is expected
+		if evt.Err != nil {
+			w.errors <- evt.Err
+			return
+		}
+
+		w.changes <- path
+	}
+}
+
+func (w *Watcher) watchValue(path string) {
+	// TODO: mutex here
+	if _, ok := w.value[path]; ok {
+		return
+	}
+
+	w.value[path] = true
+	defer delete(w.value, path)
+
+	for {
+		_, _, events, err := w.conn.GetW(path)
+		if err != nil {
+			w.errors <- err
+			return
+		}
+
+		evt := <-events
+		// TODO: zk node does not exist is normal
 		if evt.Err != nil {
 			w.errors <- evt.Err
 			return
