@@ -25,7 +25,9 @@ func (w *Watcher) Start() (chan string, chan error) {
 }
 
 func (w *Watcher) Stop() {
-	// TODO
+	// TODO: signal to terminate zk watches
+	close(w.changes)
+	close(w.errors)
 }
 
 func (w *Watcher) watchValue(path string) {
