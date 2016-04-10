@@ -7,56 +7,56 @@ import (
 type Watcher struct {
 	conn *zk.Conn
 	path string
+
+	changes chan string
+	errors  chan error
 }
 
 func NewWatcher(conn *zk.Conn, path string) *Watcher {
-	return &Watcher{conn, path}
+	return &Watcher{conn, path, make(chan string), make(chan error)}
 }
 
 func (w *Watcher) Start() (chan string, chan error) {
-	changes := make(chan string)
-	errors := make(chan error)
-
 	go func() {
-		watchTree(w.conn, w.path, changes, errors)
+		w.watchTree(w.path)
 	}()
 
-	return changes, errors
+	return w.changes, w.errors
 }
 
 func (w *Watcher) Stop() {
 	// TODO
 }
 
-func watchValue(conn *zk.Conn, path string, changes chan string, errors chan error) {
+func (w *Watcher) watchValue(path string) {
 	for {
-		_, _, events, err := conn.GetW(path)
+		_, _, events, err := w.conn.GetW(path)
 		if err != nil {
-			errors <- err
+			w.errors <- err
 			return
 		}
 
 		evt := <-events
 		// TODO: zk node does not exist is normal
 		if evt.Err != nil {
-			errors <- evt.Err
+			w.errors <- evt.Err
 			return
 		}
 
-		changes <- path
+		w.changes <- path
 	}
 }
 
-func watchTree(conn *zk.Conn, path string, changes chan string, errors chan error) {
+func (w *Watcher) watchTree(path string) {
 	// TODO: don't need value watches on level 0 (i.e. /zconfig/servers)
 	// TODO: this can also build the config
 	treeWatches := make(map[string]bool)
 	valueWatches := make(map[string]bool)
 
 	for {
-		children, _, events, err := conn.ChildrenW(path)
+		children, _, events, err := w.conn.ChildrenW(path)
 		if err != nil {
-			errors <- err
+			w.errors <- err
 			return
 		}
 
@@ -69,7 +69,7 @@ func watchTree(conn *zk.Conn, path string, changes chan string, errors chan erro
 				treeWatches[child] = true
 				go func() {
 					defer delete(treeWatches, child)
-					watchTree(conn, childpath, changes, errors)
+					w.watchTree(childpath)
 				}()
 			}
 
@@ -78,7 +78,7 @@ func watchTree(conn *zk.Conn, path string, changes chan string, errors chan erro
 				valueWatches[child] = true
 				go func() {
 					defer delete(valueWatches, child)
-					watchValue(conn, childpath, changes, errors)
+					w.watchValue(childpath)
 				}()
 			}
 		}
@@ -86,10 +86,10 @@ func watchTree(conn *zk.Conn, path string, changes chan string, errors chan erro
 		evt := <-events
 		// TODO: zk node does not exist is expected
 		if evt.Err != nil {
-			errors <- evt.Err
+			w.errors <- evt.Err
 			return
 		}
 
-		changes <- path
+		w.changes <- path
 	}
 }
