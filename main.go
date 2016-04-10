@@ -30,7 +30,8 @@ func main() {
 	zkInit(conn)
 
 	cm := NewConfigManager(conn, setup.ZkRoot, setup.BasePath)
-	cm.UpdateLocal()
+	err := cm.UpdateLocal()
+	iferr(err)
 
 	// get and watch root
 	watcher := NewWatcher(conn, setup.ZkRoot)
@@ -38,8 +39,9 @@ func main() {
 	for {
 		select {
 		case change := <-changes:
-			fmt.Printf("main:change path=%v\n", change)
-			cm.UpdateLocal()
+			fmt.Printf("change path=%v\n", change)
+			err = cm.UpdateLocal()
+			iferr(err)
 		case <-errors:
 			// we'll end up with node does not exist here
 			// which will kill the go routine (it's fine)

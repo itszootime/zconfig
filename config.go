@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"path/filepath"
 )
 
 type Config struct {
@@ -10,7 +13,17 @@ type Config struct {
 }
 
 func (c *Config) Save(path string) error {
-	// TODO: write files to path
+	for name, contents := range c.data {
+		yml, err := yaml.Marshal(&contents)
+		if err != nil {
+			return err
+		}
+		ymlpath := filepath.Join(path, name+".yml")
+		err = ioutil.WriteFile(ymlpath, yml, 0644)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -19,8 +32,8 @@ func (c *Config) String() string {
 }
 
 type ConfigManager struct {
-	conn *zk.Conn
-	root string
+	conn     *zk.Conn
+	root     string
 	basePath string
 }
 
@@ -38,9 +51,7 @@ func (cm *ConfigManager) UpdateLocal() error {
 	if err != nil {
 		return err
 	}
-	// TODO: write this
-	fmt.Printf("writeme: %v", config)
-	return nil
+	return config.Save(cm.basePath)
 }
 
 func (cm *ConfigManager) getData(path string) (map[string]interface{}, error) {
