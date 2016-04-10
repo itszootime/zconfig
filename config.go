@@ -9,11 +9,6 @@ type Config struct {
 	data map[string]interface{}
 }
 
-func FetchConfig(conn *zk.Conn, root string) (*Config, error) {
-	data, err := getData(conn, root)
-	return &Config{data: data}, err
-}
-
 func (c *Config) Save(path string) error {
 	// TODO: write files to path
 	return nil
@@ -23,10 +18,35 @@ func (c *Config) String() string {
 	return fmt.Sprintf("%v", c.data)
 }
 
-func getData(conn *zk.Conn, path string) (map[string]interface{}, error) {
+type ConfigManager struct {
+	conn *zk.Conn
+	root string
+	basePath string
+}
+
+func NewConfigManager(conn *zk.Conn, root string, basePath string) *ConfigManager {
+	return &ConfigManager{conn, root, basePath}
+}
+
+func (cm *ConfigManager) GetConfig() (*Config, error) {
+	data, err := cm.getData(cm.root)
+	return &Config{data: data}, err
+}
+
+func (cm *ConfigManager) UpdateLocal() error {
+	config, err := cm.GetConfig()
+	if err != nil {
+		return err
+	}
+	// TODO: write this
+	fmt.Printf("writeme: %v", config)
+	return nil
+}
+
+func (cm *ConfigManager) getData(path string) (map[string]interface{}, error) {
 	data := make(map[string]interface{})
 
-	children, _, err := conn.Children(path)
+	children, _, err := cm.conn.Children(path)
 	if err != nil {
 		// TODO: what errors? maybe the error just means empty value?
 		return nil, err
@@ -34,7 +54,7 @@ func getData(conn *zk.Conn, path string) (map[string]interface{}, error) {
 
 	if len(children) > 0 {
 		for i := range children {
-			child, err := getChildData(conn, path, children[i])
+			child, err := cm.getChildData(path, children[i])
 			if err != nil {
 				// TODO: errors?
 				return nil, err
@@ -46,9 +66,9 @@ func getData(conn *zk.Conn, path string) (map[string]interface{}, error) {
 	return data, nil
 }
 
-func getChildData(conn *zk.Conn, root string, child string) (interface{}, error) {
+func (cm *ConfigManager) getChildData(root string, child string) (interface{}, error) {
 	path := root + "/" + child
-	children, _, err := conn.Children(path)
+	children, _, err := cm.conn.Children(path)
 	if err != nil {
 		// TODO: what errors? maybe the error just means empty value?
 		return nil, err
@@ -56,7 +76,7 @@ func getChildData(conn *zk.Conn, root string, child string) (interface{}, error)
 
 	if len(children) == 0 {
 		// value
-		bytes, _, err := conn.Get(path)
+		bytes, _, err := cm.conn.Get(path)
 		if err != nil {
 			// TODO: what errors? maybe the error just means empty value?
 			return nil, err
@@ -64,20 +84,20 @@ func getChildData(conn *zk.Conn, root string, child string) (interface{}, error)
 		return string(bytes), nil
 	} else {
 		// could be an array of values, or could be recursive
-		data, err := getData(conn, path)
+		data, err := cm.getData(path)
 		if err != nil {
 			// TODO: errors?
 			return nil, err
 		}
 
-		return parseData(data), nil
+		return cm.parseData(data), nil
 	}
 }
 
 // the challenge here is how to decide if this is an array
 // if all values are empty strings, it's an array
 // TODO: document this logic, it can be strange under certain conditions
-func parseData(values map[string]interface{}) interface{} {
+func (cm *ConfigManager) parseData(values map[string]interface{}) interface{} {
 	valuesarr := make([]string, 0, len(values))
 	isarr := true
 	for k, v := range values {
