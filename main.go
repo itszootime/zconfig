@@ -36,10 +36,11 @@ func main() {
 	// get and watch root
 	watcher := NewWatcher(conn, setup.ZkRoot)
 	changes, errors := watcher.Start()
+
 	for {
 		select {
 		case change := <-changes:
-			fmt.Printf("change path=%v\n", change)
+			fmt.Printf("main change=%v\n", change)
 			err = cm.UpdateLocal()
 			iferr(err)
 		case <-errors:
