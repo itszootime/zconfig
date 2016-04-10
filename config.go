@@ -13,6 +13,7 @@ type Config struct {
 }
 
 func (c *Config) Save(path string) error {
+	// TODO: cleanup files which aren't in zk
 	for name, contents := range c.data {
 		yml, err := yaml.Marshal(&contents)
 		if err != nil {
