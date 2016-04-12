@@ -92,7 +92,13 @@ func (cm *ConfigManager) getChildData(root string, child string) (interface{}, e
 			// TODO: what errors? maybe the error just means empty value?
 			return nil, err
 		}
-		return string(bytes), nil
+
+		// empty values are nil
+		if len(bytes) == 0 {
+			return nil, nil
+		} else {
+			return string(bytes), nil
+		}
 	} else {
 		// could be an array of values, or could be recursive
 		data, err := cm.getData(path)
@@ -112,7 +118,7 @@ func (cm *ConfigManager) parseData(values map[string]interface{}) interface{} {
 	valuesarr := make([]string, 0, len(values))
 	isarr := true
 	for k, v := range values {
-		if str, ok := v.(string); !ok || len(str) > 0 {
+		if v != nil {
 			isarr = false
 			break
 		}

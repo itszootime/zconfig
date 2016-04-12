@@ -54,7 +54,7 @@ timeout: "1000"
 
 ### Behaviour
 
-The daemon will retrieve all values stored in ZK as strings.
+The daemon will retrieve all values stored in ZK as strings. Empty values are converted to null.
 
 Additional logic is required to determine if the value for a key should contain an array or a map. Only if **all** children of a node have empty values, it'll be an array. Consider [the previous example](#Usage), but now we want to clear the timeout value:
 
@@ -70,7 +70,7 @@ The stored configuration will be modified like so:
 - timeout
 ```
 
-As you can see, the timeout node is no longer treated as a key-value pair, but as a value in an array. For this reason, clients should return an empty string/null for **any** key that doesn't exist in the locally-cached files.
+As you can see, the timeout node is no longer treated as a key-value pair, but as a value in an array. For this reason, clients should return null for **any** key that doesn't exist in the locally-cached files.
 
 ### Clients
 
