@@ -42,11 +42,13 @@ func main() {
 			// FIXME: here we can get a node does not exist
 			fmt.Printf("main change=%v\n", change)
 			err = cm.UpdateLocal()
-			iferr(err)
-		case <-errors:
+			if err != nil {
+				fmt.Printf("main change_error=%v\n", err)
+			}
+		case err := <-errors:
 			// we'll end up with node does not exist here
 			// which will kill the go routine (it's fine)
-			// fmt.Printf("main:error error=%v\n", err)
+			fmt.Printf("main error=%v\n", err)
 		}
 	}
 }
