@@ -5,8 +5,8 @@ import (
 	"github.com/samuel/go-zookeeper/zk"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"path/filepath"
 	"os"
+	"path/filepath"
 )
 
 type Config struct {
