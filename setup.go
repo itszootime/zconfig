@@ -5,9 +5,9 @@ import (
 )
 
 type Setup struct {
-	BasePath string
-	Zk       string
-	ZkRoot   string
+	BasePath  string
+	Zk        string
+	ZkRoot    string
 	ZkTimeout time.Duration
 }
 
