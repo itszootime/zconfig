@@ -1,7 +1,5 @@
 # zconfig-daemon
 
-## Overview
-
 [ZooKeeper](http://zookeeper.apache.org/) (ZK) enables distributed and reliable storage of configuration values as a series of nodes. Typically, each component requiring access to these values will need to communicate with ZK. This has a number of disadvantages:
 
 * A client library may not be available for the language of choice.
@@ -12,7 +10,20 @@
 
 ## Build
 
-TODO
+1. Clone repository.
+
+1. Install or update [godep](https://github.com/tools/godep) and fetch dependencies:
+
+  ```
+  $ go get -u github.com/tools/godep
+  $ godep restore
+  ```
+
+1. Install:
+
+  ```
+  $ go install
+  ```
 
 ## Usage
 
@@ -20,9 +31,9 @@ TODO
 
 Flag          | Purpose
 --------------|----------
-`--zk`        | x
-`--zk-root`   | x (`/zconfig` by default)
-`--base-path` | x
+`--zk`        | ZK connection string (i.e. `zk1.example.org:2181,zk2.example.org:2181`)
+`--base-path` | Path where the locally-cached configuration will be stored
+`--zk-root`   | ZK path to the configuration (`/zconfig` by default)
 
 Once running, the daemon will recursively setup watches for children (and their values) of the root. During initialisation, and when changes are detected, it'll fetch children and values to build a configuration, which is then serialized as a series of YAML files stored in the base path.
 
@@ -56,7 +67,7 @@ timeout: "1000"
 
 The daemon will retrieve all values stored in ZK as strings. Empty values are converted to null.
 
-Additional logic is required to determine if the value for a key should contain an array or a map. Only if **all** children of a node have empty values, it'll be an array. Consider [the previous example](#Usage), but now we want to clear the timeout value:
+Additional logic is required to determine if the value for a key should contain an array or a map. Only if **all** children of a node have empty values, it'll be an array. Consider [the previous example](#usage), but now we want to clear the timeout value:
 
 ```
 $ ./zookeeper/bin/zkCli.sh
@@ -72,10 +83,6 @@ The stored configuration will be modified like so:
 
 As you can see, the timeout node is no longer treated as a key-value pair, but as a value in an array. For this reason, clients should return null for **any** key that doesn't exist in the locally-cached files.
 
-### Clients
-
-* [Ruby](https://github.com/itszootime/zconfig-ruby)
-
 ## Q&A
 
 **Why not just store a YAML/JSON serialized configuration directly in ZK?**
@@ -85,4 +92,4 @@ This complicates matters when storing the configuration in ZK, and means we can'
 Yes, it can do. Due to the fact that nesting is allowed within the configuration, a single node requires watches for both the children and the value. I need to do some further investigation to see how much of a problem this is.
 
 **Is it production ready?**
-You're welcome to give it a try.
+I'd currently consider this an alpha release which hasn't been tested in production.

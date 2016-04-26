@@ -12,9 +12,9 @@ var setup = NewSetup()
 
 func init() {
 	// TODO: check setup, ie. is the base path writable?
-	flag.StringVar(&setup.BasePath, "base-path", "", "base path")
-	flag.StringVar(&setup.Zk, "zk", "127.0.0.1:2181", "zk")
-	flag.StringVar(&setup.ZkRoot, "zk-root", "/zconfig", "zk root")
+	flag.StringVar(&setup.Zk, "zk", "127.0.0.1:2181", "ZK connection string")
+	flag.StringVar(&setup.BasePath, "base-path", "", "Path where the locally-cached configuration will be stored")
+	flag.StringVar(&setup.ZkRoot, "zk-root", "/zconfig", "ZK path to the configuration")
 	flag.Parse()
 }
 
