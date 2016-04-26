@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/samuel/go-zookeeper/zk"
+	"sync"
 )
 
 type Watcher struct {
@@ -13,7 +14,16 @@ type Watcher struct {
 
 	tree  map[string]bool
 	value map[string]bool
+
+	mutex *sync.Mutex
 }
+
+type WatchMethod int
+
+const (
+	WatchTree WatchMethod = iota
+	WatchValue
+)
 
 func NewWatcher(conn *zk.Conn, path string) *Watcher {
 	return &Watcher{
@@ -23,6 +33,7 @@ func NewWatcher(conn *zk.Conn, path string) *Watcher {
 		errors:  make(chan error),
 		tree:    make(map[string]bool),
 		value:   make(map[string]bool),
+		mutex:   &sync.Mutex{},
 	}
 }
 
@@ -41,14 +52,43 @@ func (w *Watcher) Stop() {
 	close(w.errors)
 }
 
+func (w *Watcher) watchesFor(method WatchMethod) map[string]bool {
+	switch method {
+	case WatchTree:
+		return w.tree
+	case WatchValue:
+		return w.value
+	default:
+		return nil
+	}
+}
+
+func (w *Watcher) isWatching(method WatchMethod, path string) bool {
+	watches := w.watchesFor(method)
+	w.mutex.Lock()
+	_, ok := watches[path]
+	w.mutex.Unlock()
+	return ok
+}
+
+func (w *Watcher) setWatching(method WatchMethod, path string, watching bool) {
+	watches := w.watchesFor(method)
+	w.mutex.Lock()
+	if watching {
+		watches[path] = true
+	} else {
+		delete(watches, path)
+	}
+	w.mutex.Unlock()
+}
+
 func (w *Watcher) watchTree(path string) {
-	// TODO: mutex here
-	if _, ok := w.tree[path]; ok {
+	if w.isWatching(WatchTree, path) {
 		return
 	}
 
-	w.tree[path] = true
-	defer delete(w.tree, path)
+	w.setWatching(WatchTree, path, true)
+	defer w.setWatching(WatchTree, path, false)
 
 	// TODO: don't need value watches on level 0 (i.e. /zconfig/servers)
 	for {
@@ -77,13 +117,12 @@ func (w *Watcher) watchTree(path string) {
 }
 
 func (w *Watcher) watchValue(path string) {
-	// TODO: mutex here
-	if _, ok := w.value[path]; ok {
+	if w.isWatching(WatchValue, path) {
 		return
 	}
 
-	w.value[path] = true
-	defer delete(w.value, path)
+	w.setWatching(WatchValue, path, true)
+	defer w.setWatching(WatchValue, path, false)
 
 	for {
 		_, _, events, err := w.conn.GetW(path)
