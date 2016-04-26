@@ -1,7 +1,10 @@
 package main
 
 import (
+	"errors"
 	"time"
+	"fmt"
+	"os"
 )
 
 type Setup struct {
@@ -15,6 +18,9 @@ func NewSetup() *Setup {
 	return &Setup{ZkTimeout: time.Second}
 }
 
-func (s *Setup) Validate() bool {
-	return true
+func (s *Setup) Validate() error {
+	if _, err := os.Stat(s.BasePath); err != nil {
+		return errors.New(fmt.Sprintf("Invalid base path! %v", err.Error()))
+	}
+	return nil
 }
