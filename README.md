@@ -86,10 +86,10 @@ As you can see, the timeout node is no longer treated as a key-value pair, but a
 ## Q&A
 
 **Why not just store a YAML/JSON serialized configuration directly in ZK?**
-This complicates matters when storing the configuration in ZK, and means we can't take advantage of ephermeral(sp?) nodes for service discovery.
+This complicates matters when storing the configuration in ZK, and means we can't take advantage of ephemeral nodes for service discovery.
 
 **Won't this create lots of ZK watches?**
-Yes, it can do. Due to the fact that nesting is allowed within the configuration, a single node requires watches for both the children and the value. I need to do some further investigation to see how much of a problem this is.
+Yes, it can do. Due to the fact that nesting is allowed within the configuration, a single node requires watches for both the children and the value.
 
 **Is it production ready?**
-I'd currently consider this an alpha release which hasn't been tested in production.
+I'd currently consider this an alpha release, so unfortunately not at the moment. You're always welcome to try.
