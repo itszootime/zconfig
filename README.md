@@ -31,9 +31,9 @@
 
 Flag          | Purpose
 --------------|----------
-`--zk`        | ZK connection string (i.e. `zk1.example.org:2181,zk2.example.org:2181`)
-`--base-path` | Path where the locally-cached configuration will be stored
-`--zk-root`   | ZK path to the configuration (`/zconfig` by default)
+`--zk`        | ZK connection string (default `localhost:2181`)
+`--base-path` | Path where the locally-cached configuration will be stored (default `.`)
+`--zk-root`   | ZK path to the configuration (default `/zconfig`)
 
 Once running, the daemon will recursively setup watches for children (and their values) of the root. During initialisation, and when changes are detected, it'll fetch children and values to build a configuration, which is then serialized as a series of YAML files stored in the base path.
 
