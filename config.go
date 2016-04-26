@@ -6,26 +6,11 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"path/filepath"
+	"os"
 )
 
 type Config struct {
 	data map[string]interface{}
-}
-
-func (c *Config) Save(path string) error {
-	// TODO: cleanup files which aren't in zk
-	for name, contents := range c.data {
-		yml, err := yaml.Marshal(&contents)
-		if err != nil {
-			return err
-		}
-		ymlpath := filepath.Join(path, name+".yml")
-		err = ioutil.WriteFile(ymlpath, yml, 0644)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (c *Config) String() string {
@@ -42,17 +27,54 @@ func NewConfigManager(conn *zk.Conn, root string, basePath string) *ConfigManage
 	return &ConfigManager{conn, root, basePath}
 }
 
-func (cm *ConfigManager) GetConfig() (*Config, error) {
-	data, err := cm.getData(cm.root)
-	return &Config{data: data}, err
-}
-
 func (cm *ConfigManager) UpdateLocal() error {
-	config, err := cm.GetConfig()
+	data, err := cm.getData(cm.root)
 	if err != nil {
 		return err
 	}
-	return config.Save(cm.basePath)
+
+	cfg := &Config{data: data}
+
+	err = cm.cleanLocal(cfg)
+	if err != nil {
+		return err
+	}
+
+	return cm.dumpLocal(cfg)
+}
+
+func (cm *ConfigManager) cleanLocal(cfg *Config) error {
+	files, err := ioutil.ReadDir(cm.basePath)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		filename := file.Name()
+		if _, ok := cfg.data[filename[:len(filename)-4]]; !ok {
+			err = os.Remove(filepath.Join(cm.basePath, filename))
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (cm *ConfigManager) dumpLocal(cfg *Config) error {
+	for name, contents := range cfg.data {
+		yml, err := yaml.Marshal(&contents)
+		if err != nil {
+			return err
+		}
+		ymlpath := filepath.Join(cm.basePath, name+".yml")
+		err = ioutil.WriteFile(ymlpath, yml, 0644)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (cm *ConfigManager) getData(path string) (map[string]interface{}, error) {
