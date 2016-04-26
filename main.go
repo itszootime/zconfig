@@ -39,6 +39,7 @@ func main() {
 	for {
 		select {
 		case change := <-changes:
+			// FIXME: here we can get a node does not exist
 			fmt.Printf("main change=%v\n", change)
 			err = cm.UpdateLocal()
 			iferr(err)

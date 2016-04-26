@@ -106,7 +106,6 @@ func (w *Watcher) watchTree(path string) {
 		}
 
 		evt := <-events
-		// TODO: zk node does not exist is expected
 		if evt.Err != nil {
 			w.errors <- evt.Err
 			return
@@ -132,7 +131,6 @@ func (w *Watcher) watchValue(path string) {
 		}
 
 		evt := <-events
-		// TODO: zk node does not exist is normal
 		if evt.Err != nil {
 			w.errors <- evt.Err
 			return
