@@ -1,0 +1,18 @@
+{
+	"ImportPath": "github.com/itszootime/zconfig-daemon",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v62",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/samuel/go-zookeeper/zk",
+			"Rev": "5250732bd2ed71d1e374212ebfc32760eca10c0a"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "a83829b6f1293c91addabc89d0571c246397bbf4"
+		}
+	]
+}
