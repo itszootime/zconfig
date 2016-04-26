@@ -12,8 +12,8 @@ type Watcher struct {
 	changes chan string
 	errors  chan error
 
-	tree  map[string]bool
-	value map[string]bool
+	tree  map[string]struct{}
+	value map[string]struct{}
 
 	mutex *sync.Mutex
 }
@@ -31,8 +31,8 @@ func NewWatcher(conn *zk.Conn, path string) *Watcher {
 		path:    path,
 		changes: make(chan string),
 		errors:  make(chan error),
-		tree:    make(map[string]bool),
-		value:   make(map[string]bool),
+		tree:    make(map[string]struct{}),
+		value:   make(map[string]struct{}),
 		mutex:   &sync.Mutex{},
 	}
 }
@@ -52,7 +52,7 @@ func (w *Watcher) Stop() {
 	close(w.errors)
 }
 
-func (w *Watcher) watchesFor(method WatchMethod) map[string]bool {
+func (w *Watcher) watchesFor(method WatchMethod) map[string]struct{} {
 	switch method {
 	case WatchTree:
 		return w.tree
@@ -75,7 +75,7 @@ func (w *Watcher) setWatching(method WatchMethod, path string, watching bool) {
 	watches := w.watchesFor(method)
 	w.mutex.Lock()
 	if watching {
-		watches[path] = true
+		watches[path] = struct{}{}
 	} else {
 		delete(watches, path)
 	}
