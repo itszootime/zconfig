@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
-	"strings"
 	"os"
+	"strings"
 )
 
 var setup = NewSetup()

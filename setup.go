@@ -2,9 +2,9 @@ package main
 
 import (
 	"errors"
-	"time"
 	"fmt"
 	"os"
+	"time"
 )
 
 type Setup struct {
