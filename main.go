@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
 	"strings"
-	"time"
 )
 
 var setup = NewSetup()
@@ -52,8 +51,7 @@ func main() {
 }
 
 func zkConnect() *zk.Conn {
-	// TODO: allow configurable timeout?
-	conn, _, err := zk.Connect(strings.Split(setup.Zk, ","), time.Second)
+	conn, _, err := zk.Connect(strings.Split(setup.Zk, ","), setup.ZkTimeout)
 	iferr(err) // severe
 	return conn
 }
