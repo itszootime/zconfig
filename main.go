@@ -38,7 +38,6 @@ func main() {
 	err := cm.UpdateLocal()
 	iferr(err)
 
-	// get and watch root
 	watcher := NewWatcher(conn, setup.ZkRoot)
 	changes, errors := watcher.Start()
 
@@ -51,8 +50,6 @@ func main() {
 				fmt.Printf("main change_error=%v\n", err)
 			}
 		case err := <-errors:
-			// we'll end up with node does not exist here
-			// which will kill the go routine (it's fine)
 			fmt.Printf("main error=%v\n", err)
 		}
 	}

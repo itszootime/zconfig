@@ -82,7 +82,7 @@ func (cm *ConfigManager) getData(path string) (map[string]interface{}, error) {
 
 	children, _, err := cm.conn.Children(path)
 	if err != nil {
-		// TODO: what errors? maybe the error just means empty value?
+		// TODO: error variety check
 		return nil, err
 	}
 
@@ -90,7 +90,7 @@ func (cm *ConfigManager) getData(path string) (map[string]interface{}, error) {
 		for i := range children {
 			child, err := cm.getChildData(path, children[i])
 			if err != nil {
-				// TODO: errors?
+				// TODO: error variety check
 				return nil, err
 			}
 			data[children[i]] = child
@@ -104,29 +104,26 @@ func (cm *ConfigManager) getChildData(root string, child string) (interface{}, e
 	path := root + "/" + child
 	children, _, err := cm.conn.Children(path)
 	if err != nil {
-		// TODO: what errors? maybe the error just means empty value?
+		// TODO: error variety check
 		return nil, err
 	}
 
 	if len(children) == 0 {
-		// value
 		bytes, _, err := cm.conn.Get(path)
 		if err != nil {
-			// TODO: what errors? maybe the error just means empty value?
+			// TODO: error variety check
 			return nil, err
 		}
 
-		// empty values are nil
 		if len(bytes) == 0 {
 			return nil, nil
 		} else {
 			return string(bytes), nil
 		}
 	} else {
-		// could be an array of values, or could be recursive
 		data, err := cm.getData(path)
 		if err != nil {
-			// TODO: errors?
+			// TODO: error variety check
 			return nil, err
 		}
 
@@ -134,12 +131,10 @@ func (cm *ConfigManager) getChildData(root string, child string) (interface{}, e
 	}
 }
 
-// the challenge here is how to decide if this is an array
-// if all values are empty strings, it's an array
-// TODO: document this logic, it can be strange under certain conditions
 func (cm *ConfigManager) parseData(values map[string]interface{}) interface{} {
 	valuesarr := make([]string, 0, len(values))
 	isarr := true
+	// if all values are nil, it's an array of values
 	for k, v := range values {
 		if v != nil {
 			isarr = false
