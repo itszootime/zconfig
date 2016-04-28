@@ -39,7 +39,7 @@ func NewWatcher(conn *zk.Conn, path string) *Watcher {
 
 func (w *Watcher) Start() (chan string, chan error) {
 	go func() {
-		w.watchTree(w.path)
+		w.watch(WatchTree, w.path)
 	}()
 
 	return w.changes, w.errors
@@ -82,19 +82,29 @@ func (w *Watcher) setWatching(method WatchMethod, path string, watching bool) {
 	w.mutex.Unlock()
 }
 
+// TODO: this shouldn't be here
 func (w *Watcher) isExpected(err error) bool {
 	// when setting up GetW/ChildrenW, the node may have already been deleted
 	return err.Error() == "zk: node does not exist"
 }
 
-func (w *Watcher) watchTree(path string) {
-	if w.isWatching(WatchTree, path) {
+func (w *Watcher) watch(method WatchMethod, path string) {
+	if w.isWatching(method, path) {
 		return
 	}
 
-	w.setWatching(WatchTree, path, true)
-	defer w.setWatching(WatchTree, path, false)
+	w.setWatching(method, path, true)
+	defer w.setWatching(method, path, false)
 
+	switch method {
+	case WatchTree:
+		w.watchTree(path)
+	case WatchValue:
+		w.watchValue(path)
+	}
+}
+
+func (w *Watcher) watchTree(path string) {
 	for {
 		children, _, events, err := w.conn.ChildrenW(path)
 		if err != nil {
@@ -107,8 +117,8 @@ func (w *Watcher) watchTree(path string) {
 		for i := range children {
 			child := children[i]
 			childpath := path + "/" + child
-			go w.watchTree(childpath)
-			go w.watchValue(childpath)
+			go w.watch(WatchTree, childpath)
+			go w.watch(WatchValue, childpath)
 		}
 
 		evt := <-events
@@ -122,13 +132,6 @@ func (w *Watcher) watchTree(path string) {
 }
 
 func (w *Watcher) watchValue(path string) {
-	if w.isWatching(WatchValue, path) {
-		return
-	}
-
-	w.setWatching(WatchValue, path, true)
-	defer w.setWatching(WatchValue, path, false)
-
 	for {
 		_, _, events, err := w.conn.GetW(path)
 		if err != nil {
