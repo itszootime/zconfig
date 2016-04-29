@@ -2,13 +2,19 @@
 	"ImportPath": "github.com/itszootime/zconfig-daemon",
 	"GoVersion": "go1.6",
 	"GodepVersion": "v62",
-	"Packages": [
-		"./..."
-	],
 	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.10.0-16-gcd7d1bb",
+			"Rev": "cd7d1bbe41066b6c1f19780f895901052150a575"
+		},
 		{
 			"ImportPath": "github.com/samuel/go-zookeeper/zk",
 			"Rev": "5250732bd2ed71d1e374212ebfc32760eca10c0a"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "c8bc69bc2db9c57ccf979550bc69655df5039a8a"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
 	"os"
 	"strings"
@@ -10,7 +11,16 @@ import (
 
 var setup = NewSetup()
 
+type zkLogger struct {
+}
+
+func (l *zkLogger) Printf(msg string, args ...interface{}) {
+	log.Debug(fmt.Sprintf(msg, args...))
+}
+
 func init() {
+	log.SetLevel(log.InfoLevel)
+
 	flag.StringVar(&setup.Zk, "zk", "127.0.0.1:2181", "ZK connection string")
 	flag.StringVar(&setup.BasePath, "base-path", ".", "Path where the locally-cached configuration will be stored")
 	flag.StringVar(&setup.ZkRoot, "zk-root", "/zconfig", "ZK path to the configuration")
@@ -23,12 +33,6 @@ func init() {
 	}
 }
 
-func iferr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 func main() {
 	conn := zkConnect()
 	defer conn.Close()
@@ -36,7 +40,11 @@ func main() {
 
 	cm := NewConfigManager(conn, setup.ZkRoot, setup.BasePath)
 	err := cm.UpdateLocal()
-	iferr(err)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Couldn't update local configuration cache")
+	}
 
 	watcher := NewWatcher(conn, setup.ZkRoot)
 	changes, errors := watcher.Start()
@@ -44,20 +52,32 @@ func main() {
 	for {
 		select {
 		case change := <-changes:
-			fmt.Printf("main change=%v\n", change)
+			log.WithFields(log.Fields{
+				"path": change,
+			}).Info("Change observed")
+
 			err = cm.UpdateLocal()
 			if err != nil {
-				fmt.Printf("main change_error=%v\n", err)
+				log.WithFields(log.Fields{
+					"error": err,
+				}).Error("Couldn't update local configuration cache")
 			}
 		case err := <-errors:
-			fmt.Printf("main error=%v\n", err)
+			log.WithFields(log.Fields{
+				"error": err,
+			}).Error("Got error from watcher")
 		}
 	}
 }
 
 func zkConnect() *zk.Conn {
 	conn, _, err := zk.Connect(strings.Split(setup.Zk, ","), setup.ZkTimeout)
-	iferr(err) // severe
+	conn.SetLogger(&zkLogger{})
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("Couldn't create ZK connection")
+	}
 	return conn
 }
 
@@ -66,8 +86,21 @@ func zkInit(conn *zk.Conn) {
 	flags := int32(0)
 	acl := zk.WorldACL(zk.PermAll)
 
-	_, err := conn.Create(setup.ZkRoot, nil, flags, acl)
-	if err != nil && err != zk.ErrNodeExists {
-		panic(err)
+	exists, _, err := conn.Exists(setup.ZkRoot)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"root":  setup.ZkRoot,
+			"error": err,
+		}).Fatal("Couldn't initialise ZK")
+	}
+	if !exists {
+		// TODO: ignore node already exists here
+		_, err := conn.Create(setup.ZkRoot, nil, flags, acl)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"root":  setup.ZkRoot,
+				"error": err,
+			}).Fatal("Couldn't create ZK root")
+		}
 	}
 }
