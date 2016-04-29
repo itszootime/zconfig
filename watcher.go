@@ -82,12 +82,6 @@ func (w *Watcher) setWatching(method WatchMethod, path string, watching bool) {
 	w.mutex.Unlock()
 }
 
-// TODO: this shouldn't be here
-func (w *Watcher) isExpected(err error) bool {
-	// when setting up GetW/ChildrenW, the node may have already been deleted
-	return err.Error() == "zk: node does not exist"
-}
-
 func (w *Watcher) watch(method WatchMethod, path string) {
 	if w.isWatching(method, path) {
 		return
@@ -108,7 +102,7 @@ func (w *Watcher) watchTree(path string) {
 	for {
 		children, _, events, err := w.conn.ChildrenW(path)
 		if err != nil {
-			if !w.isExpected(err) {
+			if err != zk.ErrNoNode {
 				w.errors <- err
 			}
 			return
@@ -135,7 +129,7 @@ func (w *Watcher) watchValue(path string) {
 	for {
 		_, _, events, err := w.conn.GetW(path)
 		if err != nil {
-			if !w.isExpected(err) {
+			if err != zk.ErrNoNode {
 				w.errors <- err
 			}
 			return

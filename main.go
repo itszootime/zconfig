@@ -66,11 +66,8 @@ func zkInit(conn *zk.Conn) {
 	flags := int32(0)
 	acl := zk.WorldACL(zk.PermAll)
 
-	exists, _, err := conn.Exists(setup.ZkRoot)
-	iferr(err) // severe
-	if !exists {
-		// TODO: ignore node already exists here
-		_, err := conn.Create(setup.ZkRoot, nil, flags, acl)
-		iferr(err)
+	_, err := conn.Create(setup.ZkRoot, nil, flags, acl)
+	if err != nil && err != zk.ErrNodeExists {
+		panic(err)
 	}
 }
