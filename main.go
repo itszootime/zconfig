@@ -18,7 +18,7 @@ func (l *zkLogger) Printf(msg string, args ...interface{}) {
 	log.Debug(fmt.Sprintf(msg, args...))
 }
 
-func init() {
+func main() {
 	log.SetLevel(log.InfoLevel)
 
 	flag.StringVar(&setup.Zk, "zk", "127.0.0.1:2181", "ZK connection string")
@@ -31,9 +31,7 @@ func init() {
 		flag.Usage()
 		os.Exit(1)
 	}
-}
 
-func main() {
 	conn := zkConnect()
 	defer conn.Close()
 	zkInit(conn)
