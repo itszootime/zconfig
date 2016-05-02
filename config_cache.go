@@ -82,16 +82,22 @@ func (cc *ConfigCache) getData(path string) (map[string]interface{}, error) {
 
 	children, _, err := cc.conn.Children(path)
 	if err != nil {
-		// TODO: error variety check
-		return nil, err
+		if err == zk.ErrNoNode {
+			return nil, nil
+		} else {
+			return nil, err
+		}
 	}
 
 	if len(children) > 0 {
 		for i := range children {
 			child, err := cc.getChildData(path, children[i])
 			if err != nil {
-				// TODO: error variety check
-				return nil, err
+				if err == zk.ErrNoNode {
+					return nil, nil
+				} else {
+					return nil, err
+				}
 			}
 			data[children[i]] = child
 		}
@@ -104,15 +110,21 @@ func (cc *ConfigCache) getChildData(root string, child string) (interface{}, err
 	path := root + "/" + child
 	children, _, err := cc.conn.Children(path)
 	if err != nil {
-		// TODO: error variety check
-		return nil, err
+		if err == zk.ErrNoNode {
+			return nil, nil
+		} else {
+			return nil, err
+		}
 	}
 
 	if len(children) == 0 {
 		bytes, _, err := cc.conn.Get(path)
 		if err != nil {
-			// TODO: error variety check
-			return nil, err
+			if err == zk.ErrNoNode {
+				return nil, nil
+			} else {
+				return nil, err
+			}
 		}
 
 		if len(bytes) == 0 {
@@ -123,8 +135,11 @@ func (cc *ConfigCache) getChildData(root string, child string) (interface{}, err
 	} else {
 		data, err := cc.getData(path)
 		if err != nil {
-			// TODO: error variety check
-			return nil, err
+			if err == zk.ErrNoNode {
+				return nil, nil
+			} else {
+				return nil, err
+			}
 		}
 
 		return cc.parseData(data), nil
