@@ -82,10 +82,6 @@ func zkConnect() *zk.Conn {
 }
 
 func zkInit(conn *zk.Conn) {
-	// TODO: ensure these flags are correct
-	flags := int32(0)
-	acl := zk.WorldACL(zk.PermAll)
-
 	exists, _, err := conn.Exists(setup.ZkRoot)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -93,10 +89,11 @@ func zkInit(conn *zk.Conn) {
 			"error": err,
 		}).Fatal("Couldn't initialise ZK")
 	}
+
 	if !exists {
-		// TODO: ignore node already exists here
-		_, err := conn.Create(setup.ZkRoot, nil, flags, acl)
-		if err != nil {
+		acl := zk.WorldACL(zk.PermAll)
+		_, err := conn.Create(setup.ZkRoot, nil, int32(0), acl)
+		if err != nil && err != zk.ErrNodeExists {
 			log.WithFields(log.Fields{
 				"root":  setup.ZkRoot,
 				"error": err,
