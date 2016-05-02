@@ -36,8 +36,8 @@ func main() {
 	defer conn.Close()
 	zkInit(conn)
 
-	cm := NewConfigManager(conn, setup.ZkRoot, setup.BasePath)
-	err := cm.UpdateLocal()
+	cc := NewConfigCache(conn, setup.ZkRoot, setup.BasePath)
+	err := cc.Update()
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -54,7 +54,7 @@ func main() {
 				"path": change,
 			}).Info("Change observed")
 
-			err = cm.UpdateLocal()
+			err = cc.Update()
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error": err,

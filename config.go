@@ -17,34 +17,34 @@ func (c *Config) String() string {
 	return fmt.Sprintf("%v", c.data)
 }
 
-type ConfigManager struct {
+type ConfigCache struct {
 	conn     *zk.Conn
 	root     string
 	basePath string
 }
 
-func NewConfigManager(conn *zk.Conn, root string, basePath string) *ConfigManager {
-	return &ConfigManager{conn, root, basePath}
+func NewConfigCache(conn *zk.Conn, root string, basePath string) *ConfigCache {
+	return &ConfigCache{conn, root, basePath}
 }
 
-func (cm *ConfigManager) UpdateLocal() error {
-	data, err := cm.getData(cm.root)
+func (cc *ConfigCache) Update() error {
+	data, err := cc.getData(cc.root)
 	if err != nil {
 		return err
 	}
 
 	cfg := &Config{data: data}
 
-	err = cm.cleanLocal(cfg)
+	err = cc.clean(cfg)
 	if err != nil {
 		return err
 	}
 
-	return cm.dumpLocal(cfg)
+	return cc.dump(cfg)
 }
 
-func (cm *ConfigManager) cleanLocal(cfg *Config) error {
-	files, err := ioutil.ReadDir(cm.basePath)
+func (cc *ConfigCache) clean(cfg *Config) error {
+	files, err := ioutil.ReadDir(cc.basePath)
 	if err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func (cm *ConfigManager) cleanLocal(cfg *Config) error {
 	for _, file := range files {
 		filename := file.Name()
 		if _, ok := cfg.data[filename[:len(filename)-4]]; !ok {
-			err = os.Remove(filepath.Join(cm.basePath, filename))
+			err = os.Remove(filepath.Join(cc.basePath, filename))
 			if err != nil {
 				return err
 			}
@@ -62,13 +62,13 @@ func (cm *ConfigManager) cleanLocal(cfg *Config) error {
 	return nil
 }
 
-func (cm *ConfigManager) dumpLocal(cfg *Config) error {
+func (cc *ConfigCache) dump(cfg *Config) error {
 	for name, contents := range cfg.data {
 		yml, err := yaml.Marshal(&contents)
 		if err != nil {
 			return err
 		}
-		ymlpath := filepath.Join(cm.basePath, name+".yml")
+		ymlpath := filepath.Join(cc.basePath, name+".yml")
 		err = ioutil.WriteFile(ymlpath, yml, 0644)
 		if err != nil {
 			return err
@@ -77,10 +77,10 @@ func (cm *ConfigManager) dumpLocal(cfg *Config) error {
 	return nil
 }
 
-func (cm *ConfigManager) getData(path string) (map[string]interface{}, error) {
+func (cc *ConfigCache) getData(path string) (map[string]interface{}, error) {
 	data := make(map[string]interface{})
 
-	children, _, err := cm.conn.Children(path)
+	children, _, err := cc.conn.Children(path)
 	if err != nil {
 		// TODO: error variety check
 		return nil, err
@@ -88,7 +88,7 @@ func (cm *ConfigManager) getData(path string) (map[string]interface{}, error) {
 
 	if len(children) > 0 {
 		for i := range children {
-			child, err := cm.getChildData(path, children[i])
+			child, err := cc.getChildData(path, children[i])
 			if err != nil {
 				// TODO: error variety check
 				return nil, err
@@ -100,16 +100,16 @@ func (cm *ConfigManager) getData(path string) (map[string]interface{}, error) {
 	return data, nil
 }
 
-func (cm *ConfigManager) getChildData(root string, child string) (interface{}, error) {
+func (cc *ConfigCache) getChildData(root string, child string) (interface{}, error) {
 	path := root + "/" + child
-	children, _, err := cm.conn.Children(path)
+	children, _, err := cc.conn.Children(path)
 	if err != nil {
 		// TODO: error variety check
 		return nil, err
 	}
 
 	if len(children) == 0 {
-		bytes, _, err := cm.conn.Get(path)
+		bytes, _, err := cc.conn.Get(path)
 		if err != nil {
 			// TODO: error variety check
 			return nil, err
@@ -121,17 +121,17 @@ func (cm *ConfigManager) getChildData(root string, child string) (interface{}, e
 			return string(bytes), nil
 		}
 	} else {
-		data, err := cm.getData(path)
+		data, err := cc.getData(path)
 		if err != nil {
 			// TODO: error variety check
 			return nil, err
 		}
 
-		return cm.parseData(data), nil
+		return cc.parseData(data), nil
 	}
 }
 
-func (cm *ConfigManager) parseData(values map[string]interface{}) interface{} {
+func (cc *ConfigCache) parseData(values map[string]interface{}) interface{} {
 	valuesarr := make([]string, 0, len(values))
 	isarr := true
 	// if all values are nil, it's an array of values
