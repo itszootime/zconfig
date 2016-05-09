@@ -35,9 +35,9 @@ A daemon for maintaining a locally-cached copy of a configuration stored in ZooK
 
 Flag          | Purpose
 --------------|----------
-`--zk`        | ZK connection string (default `localhost:2181`)
-`--base-path` | Path where the locally-cached configuration will be stored (default `.`)
-`--zk-root`   | ZK path to the configuration (default `/zconfig`)
+`-zk`        | ZK connection string (default `localhost:2181`)
+`-base-path` | Path where the locally-cached configuration will be stored (default `.`)
+`-zk-root`   | ZK path to the configuration (default `/zconfig`)
 
 Once running, the daemon will recursively setup watches for children (and their values) of the root. During initialisation, and when changes are detected, it'll fetch children and values to build a configuration, which is then serialized as a series of YAML files stored in the base path.
 
