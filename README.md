@@ -1,4 +1,8 @@
-# zconfig-daemon
+# zconfig
+
+A daemon for maintaining a locally-cached copy of a configuration stored in ZooKeeper.
+
+## Overview
 
 [ZooKeeper](http://zookeeper.apache.org/) (ZK) enables distributed and reliable storage of configuration values as a series of nodes. Typically, each component requiring access to these values will need to communicate with ZK. This has a number of disadvantages:
 
@@ -6,7 +10,7 @@
 * Even if client libraries are available, handling ZK connection states can be complex.
 * If every component process connects to ZK, there is a potential for a flooding of watches [ref?](#) and mass (re)connects causing knock-on failures [ref?](#).
 
-[ZConfig](https://github.com/itszootime/zconfig-daemon) consists of a daemon and (optional) client libraries. The daemon is responsible for maintaining a locally-cached copy of a configuration stored in ZK. Clients are able to read from this locally-cached copy without concern for ZK connection states and watches. To keep in sync with ZK, clients can watch OS-level file events. This approach can alleviate scalability issues, as only one set of ZK watches is required per daemon/machine, as opposed to `x` sets for `x` component processes.
+[ZConfig](https://github.com/itszootime/zconfig) is a daemon for maintaining a locally-cached copy of a configuration stored in ZK. Clients are able to read from this locally-cached copy without concern for ZK connection states and watches. To keep in sync with ZK, clients can watch OS-level file events. This approach can alleviate scalability issues, as only one set of ZK watches is required per daemon/machine, as opposed to `x` sets for `x` component processes.
 
 ## Build
 
@@ -27,7 +31,7 @@
 
 ## Usage
 
-`zconfig-daemon` can be started with the following flags:
+`zconfig` can be started with the following flags:
 
 Flag          | Purpose
 --------------|----------

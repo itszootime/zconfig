@@ -47,7 +47,7 @@ func assertCacheEquals(t *testing.T, cc *ConfigCache, exp map[string]interface{}
 }
 
 var root = "/zconfig"
-var base = filepath.Join(os.TempDir(), "zconfig-daemon")
+var base = filepath.Join(os.TempDir(), "zconfig")
 
 func TestMain(m *testing.M) {
 	err := os.Mkdir(base, 0777)
