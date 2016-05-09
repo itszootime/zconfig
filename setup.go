@@ -22,16 +22,16 @@ func NewSetup() *Setup {
 
 func (s *Setup) Validate() error {
 	if _, err := os.Stat(s.BasePath); err != nil {
-		return errors.New(fmt.Sprintf("Invalid base path! %v", err.Error()))
+		return errors.New(fmt.Sprintf("invalid base path %v", err.Error()))
 	}
 
 	files, err := ioutil.ReadDir(s.BasePath)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Invalid base path! %v", err.Error()))
+		return errors.New(fmt.Sprintf("invalid base path %v", err.Error()))
 	}
 	for _, f := range files {
 		if !strings.HasSuffix(f.Name(), ".yml") {
-			return errors.New(fmt.Sprintf("Non-ZConfig file %v detected in base path, please remove file or choose another directory", f.Name()))
+			return errors.New(fmt.Sprintf("non-ZConfig file %v in base path, please remove or select a different path", f.Name()))
 		}
 	}
 

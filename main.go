@@ -31,7 +31,7 @@ func main() {
 	flag.Parse()
 
 	if err := setup.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n\n", err.Error())
+		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err.Error())
 		flag.Usage()
 		os.Exit(1)
 	}
