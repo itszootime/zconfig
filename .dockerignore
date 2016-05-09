@@ -1,0 +1,6 @@
+.git/
+vendor/
+.gitignore
+.dockerignore
+Dockerfile
+**/*_test.go
