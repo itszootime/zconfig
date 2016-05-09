@@ -8,7 +8,7 @@ A daemon for maintaining a locally-cached copy of a configuration stored in ZooK
 
 * A client library may not be available for the language of choice.
 * Even if client libraries are available, handling ZK connection states can be complex.
-* If every component process connects to ZK, there is a potential for a flooding of watches [ref?](#) and mass (re)connects causing knock-on failures [ref?](#).
+* If every component process connects to ZK, there is a potential for a flooding of watches and mass (re)connects causing knock-on failures.
 
 [ZConfig](https://github.com/itszootime/zconfig) is a daemon for maintaining a locally-cached copy of a configuration stored in ZK. Clients are able to read from this locally-cached copy without concern for ZK connection states and watches. To keep in sync with ZK, clients can watch OS-level file events. This approach can alleviate scalability issues, as only one set of ZK watches is required per daemon/machine, as opposed to `x` sets for `x` component processes.
 
@@ -97,3 +97,7 @@ Yes, it can do. Due to the fact that nesting is allowed within the configuration
 
 **Is it production ready?**
 I'd currently consider this an alpha release, so unfortunately not at the moment. You're always welcome to try.
+
+## Acknowledgements
+
+Thanks to the [engineers at Pinterest](https://engineering.pinterest.com/): their article [ZooKeeper Resilience at Pinterest](https://engineering.pinterest.com/blog/zookeeper-resilience-pinterest) provided much of the inspiration for this approach. During the development of ZConfig, their [KingPin](https://github.com/pinterest/kingpin) toolset was open-sourced, which includes a 'ZK Update Monitor'.
