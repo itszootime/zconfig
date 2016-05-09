@@ -100,4 +100,4 @@ I'd currently consider this an alpha release, so unfortunately not at the moment
 
 ## Acknowledgements
 
-Thanks to the [engineers at Pinterest](https://engineering.pinterest.com/): their article [ZooKeeper Resilience at Pinterest](https://engineering.pinterest.com/blog/zookeeper-resilience-pinterest) provided much of the inspiration for this approach. During the development of ZConfig, their [KingPin](https://github.com/pinterest/kingpin) toolset was open-sourced, which includes a 'ZK Update Monitor'.
+Thanks to the [engineers at Pinterest](https://engineering.pinterest.com/): their article [ZooKeeper Resilience at Pinterest](https://engineering.pinterest.com/blog/zookeeper-resilience-pinterest) provided much of the inspiration for this approach. During the development of ZConfig, their [KingPin](https://github.com/pinterest/kingpin) toolset was open-sourced, which includes the 'ZK Update Monitor'.
