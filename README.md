@@ -1,5 +1,7 @@
 # zconfig
 
+[![Build Status](https://travis-ci.org/itszootime/zconfig.svg?branch=master)](https://travis-ci.org/itszootime/zconfig)
+
 A daemon for maintaining a locally-cached copy of a configuration stored in ZooKeeper.
 
 ## Overview
