@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
-	"github.com/stretchr/testify/mock"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -12,17 +11,30 @@ import (
 )
 
 type mockConn struct {
-	mock.Mock
+	children map[string][]string
+	values   map[string][]byte
+}
+
+func (m *mockConn) SetGet(path string, value []byte) {
+	if m.values == nil {
+		m.values = make(map[string][]byte)
+	}
+	m.values[path] = value
+}
+
+func (m *mockConn) SetChildren(path string, children []string) {
+	if m.children == nil {
+		m.children = make(map[string][]string)
+	}
+	m.children[path] = children
 }
 
 func (m *mockConn) Children(path string) ([]string, *zk.Stat, error) {
-	args := m.Called(path)
-	return args.Get(0).([]string), nil, nil
+	return m.children[path], nil, nil
 }
 
 func (m *mockConn) Get(path string) ([]byte, *zk.Stat, error) {
-	args := m.Called(path)
-	return args.Get(0).([]byte), nil, nil
+	return m.values[path], nil, nil
 }
 
 func assertCacheEquals(t *testing.T, cc *ConfigCache, exp map[string]interface{}) {
@@ -65,41 +77,32 @@ func TestMain(m *testing.M) {
 
 func TestUpdate(t *testing.T) {
 	conn := mockConn{}
-	conn.On("Children", root).Return([]string{"servers"})
-	conn.On("Get", root+"/servers").Return([]byte(""))
-	conn.On("Children", root+"/servers").Return([]string{})
-
 	cache := NewConfigCache(&conn, root, base)
+
+	conn.SetChildren(root, []string{"servers"})
+	conn.SetGet(root+"/servers", []byte(""))
+	conn.SetChildren(root+"/servers", []string{})
+
 	cache.Update()
 
 	assertCacheEquals(t, cache, map[string]interface{}{
 		"servers": nil,
 	})
 
-	conn = mockConn{}
-	conn.On("Children", root).Return([]string{"servers"})
-	conn.On("Get", root+"/servers").Return([]byte(""))
-	conn.On("Children", root+"/servers").Return([]string{"db"})
-	conn.On("Get", root+"/servers/db").Return([]byte(""))
-	conn.On("Children", root+"/servers/db").Return([]string{})
+	conn.SetChildren(root+"/servers", []string{"db"})
+	conn.SetGet(root+"/servers/db", []byte(""))
+	conn.SetChildren(root+"/servers/db", []string{})
 
-	cache = NewConfigCache(&conn, root, base)
 	cache.Update()
 
 	assertCacheEquals(t, cache, map[string]interface{}{
 		"servers": []string{"db"},
 	})
 
-	conn = mockConn{}
-	conn.On("Children", root).Return([]string{"servers"})
-	conn.On("Get", root+"/servers").Return([]byte(""))
-	conn.On("Children", root+"/servers").Return([]string{"db", "timeout"})
-	conn.On("Get", root+"/servers/db").Return([]byte(""))
-	conn.On("Children", root+"/servers/db").Return([]string{})
-	conn.On("Get", root+"/servers/timeout").Return([]byte("1000"))
-	conn.On("Children", root+"/servers/timeout").Return([]string{})
+	conn.SetChildren(root+"/servers", []string{"db", "timeout"})
+	conn.SetGet(root+"/servers/timeout", []byte("1000"))
+	conn.SetChildren(root+"/servers/timeout", []string{})
 
-	cache = NewConfigCache(&conn, root, base)
 	cache.Update()
 
 	assertCacheEquals(t, cache, map[string]interface{}{
@@ -109,20 +112,12 @@ func TestUpdate(t *testing.T) {
 		},
 	})
 
-	conn = mockConn{}
-	conn.On("Children", root).Return([]string{"servers"})
-	conn.On("Get", root+"/servers").Return([]byte(""))
-	conn.On("Children", root+"/servers").Return([]string{"db", "timeout"})
-	conn.On("Get", root+"/servers/db").Return([]byte(""))
-	conn.On("Children", root+"/servers/db").Return([]string{"192.168.0.1", "192.168.0.2"})
-	conn.On("Get", root+"/servers/db/192.168.0.1").Return([]byte(""))
-	conn.On("Children", root+"/servers/db/192.168.0.1").Return([]string{})
-	conn.On("Get", root+"/servers/db/192.168.0.2").Return([]byte(""))
-	conn.On("Children", root+"/servers/db/192.168.0.2").Return([]string{})
-	conn.On("Get", root+"/servers/timeout").Return([]byte("1000"))
-	conn.On("Children", root+"/servers/timeout").Return([]string{})
+	conn.SetChildren(root+"/servers/db", []string{"192.168.0.1", "192.168.0.2"})
+	conn.SetGet(root+"/servers/db/192.168.0.1", []byte(""))
+	conn.SetChildren(root+"/servers/db/192.168.0.1", []string{})
+	conn.SetGet(root+"/servers/db/192.168.0.2", []byte(""))
+	conn.SetChildren(root+"/servers/db/192.168.0.2", []string{})
 
-	cache = NewConfigCache(&conn, root, base)
 	cache.Update()
 
 	assertCacheEquals(t, cache, map[string]interface{}{
@@ -131,11 +126,13 @@ func TestUpdate(t *testing.T) {
 			"timeout": "1000",
 		},
 	})
+}
 
-	conn = mockConn{}
-	conn.On("Children", root).Return([]string{})
+func TestUpdateEmpty(t *testing.T) {
+	conn := mockConn{}
+	conn.SetChildren(root, []string{})
 
-	cache = NewConfigCache(&conn, root, base)
+	cache := NewConfigCache(&conn, root, base)
 	cache.Update()
 
 	files, _ := ioutil.ReadDir(base)
