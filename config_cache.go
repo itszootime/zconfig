@@ -18,12 +18,12 @@ func (c *Config) String() string {
 }
 
 type ConfigCache struct {
-	conn     *zk.Conn
+	conn     zkConn
 	root     string
 	basePath string
 }
 
-func NewConfigCache(conn *zk.Conn, root string, basePath string) *ConfigCache {
+func NewConfigCache(conn zkConn, root string, basePath string) *ConfigCache {
 	return &ConfigCache{conn, root, basePath}
 }
 

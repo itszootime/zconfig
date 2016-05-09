@@ -9,14 +9,18 @@ import (
 	"strings"
 )
 
-var setup = NewSetup()
-
-type zkLogger struct {
+type zkConn interface {
+	Children(string) ([]string, *zk.Stat, error)
+	Get(string) ([]byte, *zk.Stat, error)
 }
+
+type zkLogger struct{}
 
 func (l *zkLogger) Printf(msg string, args ...interface{}) {
 	log.Debug(fmt.Sprintf(msg, args...))
 }
+
+var setup = NewSetup()
 
 func main() {
 	log.SetLevel(log.InfoLevel)
